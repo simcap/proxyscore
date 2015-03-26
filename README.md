@@ -1,6 +1,10 @@
 # Proxyscore
 
-Command line interface to evaluate the anonymity of a given proxy
+Command line interface to evaluate the anonymity of a given proxy.
+
+## Anonymity 
+
+To understand the different level have a look at http://www.proxynova.com/proxy-articles/proxy-anonymity-levels-explained/
 
 ## Install
 
@@ -12,7 +16,7 @@ Run
 
 Then
 
-    $ proxyscore -p 164.215.111.16:80
+    $ proxyscore -p 164.215.111.16:80     // proxy given as host:port
 
 ... would give you the following json in stdout
 

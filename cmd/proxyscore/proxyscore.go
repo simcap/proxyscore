@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	proxy := flag.String("p", "", "valid proxy ip address with port (ex: 1.2.3.4:6789)")
+	proxy := flag.String("p", "", "valid proxy ip address with port (ex: 176.107.17.129:8080")
 	flag.Parse()
 
 	client := NewProxiedClient(*proxy)
@@ -22,6 +22,7 @@ func main() {
 
 	received := Received{}
 	errdec := json.NewDecoder(resp.Body).Decode(&received)
+
 	if errdec != nil {
 		log.Fatalf("Error decoding incoming json: %s", errdec)
 	}
@@ -37,8 +38,8 @@ func main() {
 }
 
 type Outcome struct {
-	Anonymous      bool
 	Score          int
+	Level          string
 	MyIP           string
 	Proxy          string
 	IPdetection    map[string]string
@@ -46,13 +47,30 @@ type Outcome struct {
 }
 
 func NewOutcome(ip net.IP, proxy string, ipdetection map[string]string, proxydetection map[string]string) Outcome {
-	anon := false
+	ipdetected, proxydetected := true, true
+	score, level := 3, "transparent"
+
 	if ipdetection == nil || len(ipdetection) == 0 {
-		anon = true
+		ipdetected = false
 	}
 	if proxydetection == nil || len(proxydetection) == 0 {
+		proxydetected = false
 	}
-	return Outcome{Anonymous: anon, Proxy: proxy, MyIP: ip.String(), IPdetection: ipdetection, Proxydetection: proxydetection}
+
+	if !ipdetected {
+		if proxydetected {
+			level, score = "anonymous", 2
+		} else {
+			level, score = "elite", 1
+		}
+	}
+
+	return Outcome{
+		Proxy: proxy, Level: level,
+		Score: score,
+		MyIP:  ip.String(), IPdetection: ipdetection,
+		Proxydetection: proxydetection,
+	}
 }
 
 type ProxiedClient struct {
@@ -94,13 +112,13 @@ func (pc *ProxiedClient) pingTarget(url string) *http.Response {
 }
 
 type Received struct {
-	Headers    map[string][]string
+	Header     map[string][]string
 	RemoteAddr string
 }
 
 func (r *Received) containsIP(myip net.IP) map[string]string {
-	var detected map[string]string
-	for k, v := range r.Headers {
+	detected := make(map[string]string)
+	for k, v := range r.Header {
 		for _, vv := range v {
 			if ip := net.ParseIP(vv); ip != nil && myip.Equal(ip) {
 				detected[k] = ip.String()
@@ -116,11 +134,11 @@ func (r *Received) containsIP(myip net.IP) map[string]string {
 	return detected
 }
 
-var proxyinforeg = regexp.MustCompile(`(?i)forw|via|prox`)
+var proxyinforeg = regexp.MustCompile(`(?i)forw|via|prox|client|ip`)
 
 func (r *Received) containsProxyInfo() map[string]string {
-	var detected map[string]string
-	for k, v := range r.Headers {
+	detected := make(map[string]string)
+	for k, v := range r.Header {
 		if proxyinforeg.MatchString(k) {
 			detected[k] = v[0]
 		}
