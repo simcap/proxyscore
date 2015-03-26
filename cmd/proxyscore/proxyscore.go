@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -13,9 +14,11 @@ import (
 
 const servicePort = 4673
 
+var serviceIp = []byte{0x34, 0x35, 0x2e, 0x35, 0x35, 0x2e, 0x31, 0x34, 0x34, 0x2e, 0x31, 0x36, 0x31}
+
 func main() {
 	proxy := flag.String("p", "", "valid proxy ip address with port (ex: 1.2.3.4:6789)")
-	service := flag.String("r", "", "receiver (with service running) ip address ")
+	verbose := flag.Bool("v", false, "verbose in case of errors")
 
 	flag.Parse()
 
@@ -25,9 +28,8 @@ func main() {
 	}
 
 	proxyip := net.ParseIP(ip)
-	serviceip := net.ParseIP(*service)
 
-	if proxyip == nil || serviceip == nil {
+	if proxyip == nil {
 		log.Fatalf("invalid ip address provided")
 	}
 
@@ -36,15 +38,23 @@ func main() {
 		log.Fatalf("Error setting proxy in env: %s", err)
 	}
 
-	resp, err := http.Get(fmt.Sprintf("http://%s:%d", serviceip, servicePort))
-	defer resp.Body.Close()
-
-	json.NewEncoder(os.Stdout).Encode(resp.Request)
-
+	resp, err := http.Get(fmt.Sprintf("http://%s:%d", serviceIp, servicePort))
 	if err != nil {
 		log.Fatalf("Error contacting service: %s", err)
 	}
+	defer resp.Body.Close()
 
 	body, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println(body)
+
+	if status := resp.StatusCode; status < 200 || status > 299 {
+		log.Printf("HTTP NOK - Received %d\n", status)
+		if *verbose {
+			log.Printf("BODY: %s\n", bytes.NewBuffer(body).String())
+		}
+		os.Exit(1)
+	}
+
+	var out bytes.Buffer
+	json.Indent(&out, body, "", "\t")
+	out.WriteTo(os.Stdout)
 }
