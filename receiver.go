@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"sync"
 )
@@ -33,7 +32,8 @@ func (s *store) add(id string, r *http.Request) {
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(fmt.Sprintf("%v", results)))
+	e := json.NewEncoder(w)
+	e.Encode(r)
 }
 
 func submit(w http.ResponseWriter, r *http.Request) {
