@@ -28,25 +28,7 @@ func main() {
 
 	flag.Parse()
 
-	ip, proxyport, errsplit := net.SplitHostPort(*proxy)
-	if errsplit != nil {
-		log.Fatalf("cannot split proxy address into ip and port: %s", errsplit)
-	}
-
-	proxyip := net.ParseIP(ip)
-	if proxyip == nil {
-		log.Fatalf("invalid ip address provided")
-	}
-
-	proxyurl, errurl := url.Parse(fmt.Sprintf("http://%s", net.JoinHostPort(proxyip.String(), proxyport)))
-	if errurl != nil {
-		log.Fatalf("Cannot construct proxy url %s", errurl)
-	}
-
-	transport := &http.Transport{
-		Proxy: http.ProxyURL(proxyurl),
-	}
-	client := &http.Client{Transport: transport}
+	client := newProxiedClient(*proxy)
 
 	resp, errget := client.Get(serviceURL)
 	if errget != nil {
@@ -94,6 +76,28 @@ func containsMyIP(result serviceResponse, myip net.IP) []string {
 	}
 
 	return guilty
+}
+
+func newProxiedClient(proxyinput string) *http.Client {
+	ip, proxyport, errsplit := net.SplitHostPort(proxyinput)
+	if errsplit != nil {
+		log.Fatalf("cannot split proxy address into ip and port: %s", errsplit)
+	}
+
+	proxyip := net.ParseIP(ip)
+	if proxyip == nil {
+		log.Fatalf("invalid ip address provided")
+	}
+
+	proxyurl, errurl := url.Parse(fmt.Sprintf("http://%s", net.JoinHostPort(proxyip.String(), proxyport)))
+	if errurl != nil {
+		log.Fatalf("Cannot construct proxy url %s", errurl)
+	}
+
+	transport := &http.Transport{
+		Proxy: http.ProxyURL(proxyurl),
+	}
+	return &http.Client{Transport: transport}
 }
 
 func getMyIp() net.IP {
