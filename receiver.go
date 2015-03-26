@@ -13,5 +13,13 @@ func main() {
 func home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	e := json.NewEncoder(w)
-	e.Encode(r)
+
+	d := struct {
+		Headers    http.Header
+		RemoteAddr string
+	}{
+		Headers:    r.Header,
+		RemoteAddr: r.RemoteAddr,
+	}
+	e.Encode(d)
 }
