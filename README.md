@@ -2,19 +2,25 @@
 
 Command line interface to evaluate the anonymity of a given proxy.
 
-## Anonymity 
+## Anonymity
 
 To understand the different level have a look at http://www.proxynova.com/proxy-articles/proxy-anonymity-levels-explained/
 
 ## Install
 
-**You need to have Go insalled beforehand**
+Either
 
-Run
+* Install Go beforehand
+* Run `got get github.com/simcap/proxyscore/cmd/proxyscore`
 
-    got get github.com/simcap/proxyscore/cmd/proxyscore
+Or
 
-Then
+* Get the executable (built for `darwin_386`) at https://github.com/simcap/proxyscore/releases/tag/v0.9
+
+
+## Usage
+
+At your command line
 
     $ proxyscore -p 164.215.111.16:80     // proxy given as host:port
 
