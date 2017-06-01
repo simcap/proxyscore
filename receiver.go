@@ -2,17 +2,22 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
+	"log"
 	"net/http"
 )
 
+var portFlag = flag.String("p", ":4673", "Service port")
+
 func main() {
+	flag.Parse()
+
 	http.HandleFunc("/", home)
-	http.ListenAndServe(":4673", nil)
+	log.Fatal(http.ListenAndServe(*portFlag, nil))
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	e := json.NewEncoder(w)
 
 	d := struct {
 		Headers    http.Header
@@ -21,5 +26,6 @@ func home(w http.ResponseWriter, r *http.Request) {
 		Headers:    r.Header,
 		RemoteAddr: r.RemoteAddr,
 	}
-	e.Encode(d)
+
+	json.NewEncoder(w).Encode(d)
 }

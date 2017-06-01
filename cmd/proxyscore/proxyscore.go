@@ -3,21 +3,27 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
+)
+
+var (
+	proxyFlag             = flag.String("p", "", "valid proxy ip address with port (ex: 176.107.17.129:8080")
+	receiverTargetURLFlag = flag.String("t", "", "Target URL that has the receiver deployed to analyzes the request and send back results")
 )
 
 func main() {
-	proxy := flag.String("p", "", "valid proxy ip address with port (ex: 176.107.17.129:8080")
 	flag.Parse()
 
-	client := NewProxiedClient(*proxy)
+	client := NewProxiedClient(*proxyFlag)
 
-	resp := client.pingTarget(targetURL)
+	resp := client.pingTarget(*receiverTargetURLFlag)
 	defer resp.Body.Close()
 
 	received := Received{}
@@ -27,11 +33,11 @@ func main() {
 		log.Fatalf("Error decoding incoming json: %s", errdec)
 	}
 
-	myip := MyIp()
+	myip := myIP()
 	ipdetected := received.containsIP(myip)
 	proxyinfodetected := received.containsProxyInfo()
 
-	outcome := NewOutcome(myip, *proxy, ipdetected, proxyinfodetected)
+	outcome := NewOutcome(myip, *proxyFlag, ipdetected, proxyinfodetected)
 
 	j, _ := json.MarshalIndent(outcome, "", "  ")
 	os.Stdout.Write(j)
@@ -147,21 +153,18 @@ func (r *Received) containsProxyInfo() map[string]string {
 	return detected
 }
 
-func MyIp() net.IP {
-	resp, err := http.Get(myIpURL)
+func myIP() net.IP {
+	service := "http://checkip.amazonaws.com/"
+	resp, err := http.Get(service)
 	if err != nil {
-		log.Fatalf("Error '%s' service to get your IP: %s", myIpURL, err)
+		log.Fatalf("cannot get your ip from service %s: %s", service, err)
+	}
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("cannot parse your ip '%q' from service %s: %s", b, service, err)
 	}
 	defer resp.Body.Close()
 
-	d := struct{ IP string }{}
-	json.NewDecoder(resp.Body).Decode(&d)
-	myip := net.ParseIP(d.IP)
-	if myip == nil {
-		log.Fatalf("Error parsing your ip %s from service %s", d.IP, myIpURL)
-	}
-	return myip
+	return net.ParseIP(strings.TrimSpace(string(b)))
 }
-
-var targetURL = "\x68\x74\x74\x70\x3a\x2f\x2f\x34\x35\x2e\x35\x35\x2e\x31\x34\x34\x2e\x31\x36\x31\x3a\x34\x36\x37\x33"
-var myIpURL = "http://api.ipify.org/?format=json"

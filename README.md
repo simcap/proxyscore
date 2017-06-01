@@ -20,9 +20,11 @@ Or
 
 ## Usage
 
-At your command line
+Build and deploy the receiver on a given server (ex: 52.83.204.204:80)
 
-    $ proxyscore -p 164.215.111.16:80     // proxy given as host:port
+Then from your workstation command line:
+
+    $ proxyscore -p 164.215.111.16:80 -t http://52.83.204.204:80
 
 ... would give you the following json in stdout
 
